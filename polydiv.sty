@@ -7,6 +7,7 @@
 \bool_new:N \l__poly_trailing_bool
 \bool_new:N \l__poly_ptrailing_bool
 \bool_new:N \l__poly_stage_bool
+\bool_new:N \l__poly_mod_bool
 \bool_set_true:N \l__poly_stage_bool
 \tl_new:N \l__poly_var_tl
 \tl_new:N \l__poly_sep_tl
@@ -18,6 +19,7 @@
 \tl_set:Nn \l__poly_longdiv_sep_tl {}
 \int_new:N \l__poly_deg_int
 \int_new:N \l__poly_pad_int
+\int_new:N \l__poly_base_int
 \int_new:N \l__poly_tmpa_int
 \int_new:N \l__poly_tmpb_int
 \int_new:N \l__poly_trailing_int
@@ -25,12 +27,17 @@
 \int_new:N \l__poly_cstage_int
 \int_set:Nn \l__poly_pad_int{3}
 \seq_new:N \l__poly_gtmpa_seq
+\seq_new:N \l__poly_mod_seq
 
 \keys_define:nn { polynomial }
 {
   stage .code:n = {
     \bool_set_false:N \l__poly_stage_bool
     \int_set:Nn \l__poly_stage_int {#1}
+  },
+  base .code:n = {
+    \bool_set_true:N \l__poly_mod_bool
+    \int_set:Nn \l__poly_base_int {#1}
   },
   zeros .bool_set:N = \l__poly_zeros_bool,
   separator .tl_set:N = \l__poly_sep_tl,
@@ -97,18 +104,32 @@
 }
 \cs_generate_variant:Nn \poly_print:N {c}
 
+\cs_new_nopar:Npn \poly_reduce_mod:N #1 {
+  \bool_if:NT \l__poly_mod_bool
+  {
+    \seq_clear_new:N \l__poly_mod_seq
+    \int_step_inline:nnnn {1} {1} {\seq_count:N #1} {
+      \seq_put_left:Nx \l__poly_mod_seq {\int_mod:nn {\int_mod:nn {\seq_item:Nn #1 { - ##1}+0} {\l__poly_base_int} + \l__poly_base_int}{\l__poly_base_int}}
+    }
+    \seq_set_eq:NN #1 \l__poly_mod_seq
+  }
+}
+
 \cs_new_nopar:Npn \poly_add:NNN #1#2#3 {
   \seq_clear_new:N #1
   \int_step_inline:nnnn {1} {1} {\int_max:nn {\seq_count:N #2} {\seq_count:N #3}} {
     \seq_put_left:Nx #1 {\int_eval:n {\seq_item:Nn #2 { - ##1} + \seq_item:Nn #3 { - ##1}+0}}
   }
+  \poly_reduce_mod:N #1
 }
 \cs_generate_variant:Nn \poly_add:NNN {Ncc,ccc}
+
 \cs_new_nopar:Npn \poly_sub:NNN #1#2#3 {
   \seq_clear_new:N #1
   \int_step_inline:nnnn {1} {1} {\int_max:nn {\seq_count:N #2} {\seq_count:N #3}} {
     \seq_put_left:Nx #1 {\int_eval:n {\seq_item:Nn #2 { - ##1} - \seq_item:Nn #3 { - ##1}+0}}
   }
+  \poly_reduce_mod:N #1
 }
 \cs_generate_variant:Nn \poly_sub:NNN {Ncc,ccc}
 \cs_new_nopar:Npn \poly_shift:Nn #1#2 {
@@ -137,12 +158,14 @@
   \group_end:
   \seq_set_eq:NN #1 \l__poly_gtmpa_seq
   \seq_clear:N \l__poly_gtmpa_seq
+  \poly_reduce_mod:N #1
 }
 \cs_generate_variant:Nn \poly_mul:NNN {Ncc, ccc}
 \cs_new_nopar:Npn \poly_div:NNN #1#2#3 {
   \seq_clear_new:N #1
   \seq_put_left:Nx #1 {\int_eval:n {\seq_item:Nn #2 {1} / \seq_item:Nn #3 {1}}}
   \poly_shift:Nn #1 {\seq_count:N #2 - \seq_count:N #3}
+  \poly_reduce_mod:N #1
 }
 \cs_generate_variant:Nn \poly_div:NNN {Ncc, ccc}
 \prg_new_conditional:Npnn \poly_is_divisible:NN #1#2 {p,T,F,TF} {
