@@ -61,6 +61,7 @@
     \bool_if:nTF {\int_compare_p:n {##1 == 0} && \l__poly_first_bool}
     {
       \tl_use:N \l__poly_sep_tl
+      \int_compare:nT {\l__poly_deg_int == 0}{0}
       \tl_use:N \l__poly_sep_tl
     }
     {
@@ -178,7 +179,11 @@
   }
 }
 \cs_new_nopar:Npn \poly_trim:N #1 {
-  \bool_do_while:nn {\int_compare_p:n {\seq_item:Nn #1 {1} == 0}} {
+  \bool_do_while:nn {
+    \int_compare_p:n {\seq_count:N #1 > 1}
+    &&
+    \int_compare_p:n {\seq_item:Nn #1 {1} == 0}
+  } {
     \seq_pop_left:NN #1 \l_tmpa_tl
   }
 }
@@ -213,6 +218,7 @@
       \int_incr:N \l__poly_cstage_int
     }
   }
+
   \int_set:Nn \l__poly_pad_int {\seq_count:N #1 + \seq_count:N
     #2-1}
   \tl_set:Nn \l__poly_sep_tl {&}
