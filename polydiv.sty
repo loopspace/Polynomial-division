@@ -22,6 +22,10 @@
 \int_new:N \l__poly_base_int
 \int_new:N \l__poly_tmpa_int
 \int_new:N \l__poly_tmpb_int
+\int_new:N \l__poly_mod_tmpa_int
+\int_new:N \l__poly_mod_tmpb_int
+\int_new:N \l__poly_mod_tmpc_int
+\int_new:N \l__poly_mod_tmpd_int
 \int_new:N \l__poly_trailing_int
 \int_new:N \l__poly_stage_int
 \int_new:N \l__poly_cstage_int
@@ -38,6 +42,7 @@
   base .code:n = {
     \bool_set_true:N \l__poly_mod_bool
     \int_set:Nn \l__poly_base_int {#1}
+    \cs_set_eq:NN \poly_int_div:Nnn \poly_mod_int_div:Nnn
   },
   zeros .bool_set:N = \l__poly_zeros_bool,
   separator .tl_set:N = \l__poly_sep_tl,
@@ -162,9 +167,37 @@
   \poly_reduce_mod:N #1
 }
 \cs_generate_variant:Nn \poly_mul:NNN {Ncc, ccc}
+
+\cs_new_nopar:Npn \poly_int_div:Nnn #1#2#3
+{
+  \int_set:Nn #1 {#2 / #3}
+}
+
+\cs_new_nopar:Npn \poly_mod_int_div:Nnn #1#2#3
+{
+  \int_zero:N \l__poly_mod_tmpa_int
+  \int_set_eq:NN \l__poly_mod_tmpb_int #2
+  \int_set:Nn \l__poly_mod_tmpc_int { \l__poly_base_int - #3 }
+  \bool_while_do:nn {
+    \int_compare_p:n { \l__poly_mod_tmpa_int < \l__poly_base_int }
+    &&
+    \int_compare_p:n {\l__poly_mod_tmpb_int != 0 }
+  }
+  {
+    \int_incr:N \l__poly_mod_tmpa_int
+    \int_set:Nn \l__poly_mod_tmpb_int {
+      \int_mod:nn { \l__poly_mod_tmpb_int + \l__poly_mod_tmpc_int }
+      { \l__poly_base_int }
+    }
+  }
+    
+  \int_set_eq:NN #1 \l__poly_mod_tmpa_int
+}
+
 \cs_new_nopar:Npn \poly_div:NNN #1#2#3 {
   \seq_clear_new:N #1
-  \seq_put_left:Nx #1 {\int_eval:n {\seq_item:Nn #2 {1} / \seq_item:Nn #3 {1}}}
+  \poly_int_div:Nnn \l__poly_tmpa_int {\seq_item:Nn #2 {1} } { \seq_item:Nn #3 {1}}
+  \seq_put_left:NV #1 \l__poly_tmpa_int
   \poly_shift:Nn #1 {\seq_count:N #2 - \seq_count:N #3}
   \poly_reduce_mod:N #1
 }
